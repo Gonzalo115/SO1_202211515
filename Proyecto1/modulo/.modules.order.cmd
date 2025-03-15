@@ -1,0 +1,1 @@
+savedcmd_/home/fernando/Documentos/Repositorios/Sistemas_Operativos/SO1_202211515/Proyecto1/modulo/modules.order := {   echo /home/fernando/Documentos/Repositorios/Sistemas_Operativos/SO1_202211515/Proyecto1/modulo/read_containers.o; :; } > /home/fernando/Documentos/Repositorios/Sistemas_Operativos/SO1_202211515/Proyecto1/modulo/modules.order

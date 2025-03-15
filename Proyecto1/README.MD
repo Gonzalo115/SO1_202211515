@@ -106,6 +106,22 @@ Agrega esta línea al final:
 
 ---
 
-![]()
+# Moudulo
+
+Desarrollado en C
+
+```bash
+# Compilar
+make
+# Cargar el modulo
+sudo insmod goz.ko
+```
+
+```bash
+# Ejecutar
+cat /proc/goz
+# Eliminar
+sudo rmmod /proc/goz
+```
 
 ---
