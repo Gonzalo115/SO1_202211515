@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-server-kafka
+  namespace: proyecto2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-server-kafka
+  template:
+    metadata:
+      labels:
+        app: grpc-server-kafka
+    spec:
+      containers:
+        - name: grpc-server-kafka
+          image: 18fernando/grpc-server-kafka:1
+          ports:
+            - containerPort: 50051
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-server-kafka
+  namespace: proyecto2
+spec:
+  selector:
+    app: grpc-server-kafka
+  ports:
+    - protocol: TCP
+      port: 50051
+      targetPort: 50051
+  type: ClusterIP

@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-server-rabbit
+  namespace: proyecto2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-server-rabbit
+  template:
+    metadata:
+      labels:
+        app: grpc-server-rabbit
+    spec:
+      containers:
+        - name: grpc-server-kafka
+          image: 18fernando/grpc-server-rabbit:1
+          ports:
+            - containerPort: 50052
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-server-rabbit
+  namespace: proyecto2
+spec:
+  selector:
+    app: grpc-server-rabbit
+  ports:
+    - protocol: TCP
+      port: 50052
+      targetPort: 50052
+  type: ClusterIP

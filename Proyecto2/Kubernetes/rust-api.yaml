@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rust-api
+  namespace: proyecto2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rust-api
+  template:
+    metadata:
+      labels:
+        app: rust-api
+    spec:
+      containers:
+        - name: rust-api
+          image: 18fernando/deploymentrust:2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: GO_SERVICE_URL
+              value: "http://grpc-client:8081"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rust-api
+  namespace: proyecto2
+spec:
+  selector:
+    app: rust-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+  type: ClusterIP

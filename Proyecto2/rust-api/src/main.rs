@@ -1,4 +1,4 @@
-use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
 
 use reqwest::Client;
@@ -11,6 +11,12 @@ struct WeatherData {
     country: String,
     weather: String,
 }
+
+#[get("/")]
+async fn index() -> impl Responder {
+    HttpResponse::Ok().body("API de Rust en ejecución")
+}
+
 
 
 #[post("/input")]
@@ -43,9 +49,9 @@ async fn send_to_go_service(data: &WeatherData) -> Result<(), reqwest::Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Starting server on http://0.0.0.0:8080");
     HttpServer::new(|| {
         App::new()
+            .service(index)
             .service(receive_weather)
     })
     .bind(("0.0.0.0", 8080))?

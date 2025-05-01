@@ -1,5 +1,5 @@
 # --- ETAPA DE CONSTRUCCIÓN ---
-    FROM rust:latest as builder
+    FROM rust:latest AS builder
 
     WORKDIR /usr/src/app
     COPY . .
