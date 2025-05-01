@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  rust-api:
+    build:
+      context: ./rust-api
+    container_name: rust-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - client
+    networks:
+      - grpc-network
+
+  client:
+    build:
+      context: ./grpc-client
+    container_name: grpc-client
+    ports:
+      - "8081:8081"
+    depends_on:
+      - server-kafka
+      - server-rabbit
+    networks:
+      - grpc-network
+
+  server-kafka:
+    build:
+      context: ./grpc-server-kafka
+    container_name: grpc-server-kafka
+    ports:
+      - "50051:50051"
+    networks:
+      - grpc-network
+
+  server-rabbit:
+    build:
+      context: ./grpc-server-rabbit
+    container_name: grpc-server-rabbit
+    ports:
+      - "50052:50052"
+    networks:
+      - grpc-network
+
+networks:
+  grpc-network:
+    driver: bridge

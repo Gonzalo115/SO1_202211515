@@ -1,18 +1,44 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+use reqwest::Client;
+use std::time::Duration;
+
+
+#[derive(Debug, Deserialize, Serialize)]
 struct WeatherData {
     description: String,
     country: String,
     weather: String,
 }
 
+
 #[post("/input")]
 async fn receive_weather(data: web::Json<WeatherData>) -> impl Responder {
-    println!("Received: {:?}", data);
-    // Proxima logica para enviar los datos a la API rest de go
-    HttpResponse::Ok().body("Received weather data")
+    // Enviar datos al servicio Go (API REST)
+    match send_to_go_service(&data.into_inner()).await {
+        Ok(_) => HttpResponse::Ok().body("Datos recibidos y enviados a Go"),
+        Err(e) => {
+            eprintln!("Error enviando a Go: {}", e);
+            HttpResponse::InternalServerError().body("Error interno")
+        }
+    }
+}
+
+// Cliente HTTP para enviar datos a Go
+async fn send_to_go_service(data: &WeatherData) -> Result<(), reqwest::Error> {
+    let client = Client::new();
+    let go_service_url = std::env::var("GO_SERVICE_URL")
+        .unwrap_or_else(|_| "http://grpc-client:8081/".to_string());
+
+    client
+        .post(&go_service_url)
+        .json(data)
+        .timeout(Duration::from_secs(2))
+        .send()
+        .await?;
+
+    Ok(())
 }
 
 #[actix_web::main]
