@@ -15,9 +15,14 @@ spec:
     spec:
       containers:
         - name: grpc-server-kafka
-          image: 18fernando/grpc-server-kafka:1
+          image: 18fernando/grpc-server-kafka:5
           ports:
             - containerPort: 50051
+          env:
+            - name: KAFKA_BROKER
+              value: "my-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: KAFKA_TOPIC
+              value: "my-topic"
 
 ---
 apiVersion: v1

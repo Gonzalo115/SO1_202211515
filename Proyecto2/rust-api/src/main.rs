@@ -21,6 +21,7 @@ async fn index() -> impl Responder {
 
 #[post("/input")]
 async fn receive_weather(data: web::Json<WeatherData>) -> impl Responder {
+    println!("Received: {:?}", data);
     // Enviar datos al servicio Go (API REST)
     match send_to_go_service(&data.into_inner()).await {
         Ok(_) => HttpResponse::Ok().body("Datos recibidos y enviados a Go"),
@@ -49,6 +50,7 @@ async fn send_to_go_service(data: &WeatherData) -> Result<(), reqwest::Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("Starting server on http://0.0.0.0:8080");
     HttpServer::new(|| {
         App::new()
             .service(index)

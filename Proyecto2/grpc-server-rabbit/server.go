@@ -19,7 +19,7 @@ func (s *server) PostToRabbitMQ(ctx context.Context, req *pb.WeatherData) (*pb.W
 	
     //Guardar en kafka
 
-	message := fmt.Sprintf("Datos Recibido correctamente: %s", req.Country)
+	message := fmt.Sprintf("Datos Recibido correctamente del Country: %s", req.Country)
 
 	return &pb.WeatherResponse{Message: message}, nil
 }
