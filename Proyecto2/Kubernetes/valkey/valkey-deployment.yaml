@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: valkey
+  namespace: proyecto2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: valkey
+  template:
+    metadata:
+      labels:
+        app: valkey
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:7.2 # Imagen oficial de Valkey
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: "200m" # 0.2 CPU
+              memory: "256Mi" # 256 MB RAM
+            limits:
+              cpu: "500m" # 0.5 CPU
+              memory: "512Mi" # 512 MB RAM
+          command: ["valkey-server", "--save", ""] # Desactiva persistencia en disco

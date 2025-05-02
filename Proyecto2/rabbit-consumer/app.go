@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"os"
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
 )
 
 type WeatherData struct {
@@ -16,42 +18,72 @@ type WeatherData struct {
 }
 
 func main() {
-	// Configuración de RabbitMQ desde variables de entorno
+	// Configuración desde variables de entorno
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
 	if rabbitMQURL == "" {
 		rabbitMQURL = "amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/"
 	}
+	
 	queueName := os.Getenv("RABBITMQ_QUEUE")
 	if queueName == "" {
 		queueName = "weather-queue"
 	}
+	
+	valkeyHost := os.Getenv("VALKEY_HOST")
+	if valkeyHost == "" {
+		valkeyHost = "valkey-service.proyecto2.svc.cluster.local:6379"
+	}
+	
+	valkeyPassword := os.Getenv("VALKEY_PASSWORD")
 
-	// Conectar a RabbitMQ
-	var conn *amqp091.Connection
-	var err error
-	for i := 0; i < 5; i++ {
-		conn, err = amqp091.Dial(rabbitMQURL)
+	// Inicializar cliente Valkey (compatible con Redis)
+	valkeyClient := redis.NewClient(&redis.Options{
+		Addr:     valkeyHost,
+		Password: valkeyPassword,
+		DB:       0, // Base de datos por defecto
+	})
+
+	// Verificar conexión a Valkey
+	ctx := context.Background()
+	_, err := valkeyClient.Ping(ctx).Result()
+	if err != nil {
+		log.Fatalf("Error conectando a Valkey: %v", err)
+	}
+	log.Println("Conexión a Valkey establecida")
+
+	// Configurar conexión a RabbitMQ con reintentos
+	var rabbitConn *amqp091.Connection
+	maxRetries := 5
+	retryDelay := 2 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
+		rabbitConn, err = amqp091.Dial(rabbitMQURL)
 		if err == nil {
 			break
 		}
-		log.Printf("Error conectando a RabbitMQ (intento %d): %v", i+1, err)
-		time.Sleep(2 * time.Second)
+		
+		log.Printf("Error conectando a RabbitMQ (intento %d/%d): %v", i+1, maxRetries, err)
+		if i < maxRetries-1 {
+			time.Sleep(retryDelay)
+		}
 	}
-	if conn == nil {
-		log.Fatalf("No se pudo conectar a RabbitMQ después de varios intentos")
-	}
-	defer conn.Close()
 
-	// Crear canal
-	ch, err := conn.Channel()
+	if rabbitConn == nil {
+		log.Fatalf("No se pudo conectar a RabbitMQ después de %d intentos", maxRetries)
+	}
+	defer rabbitConn.Close()
+	log.Println("Conexión a RabbitMQ establecida")
+
+	// Crear canal RabbitMQ
+	channel, err := rabbitConn.Channel()
 	if err != nil {
-		log.Fatalf("Error creando canal de RabbitMQ: %v", err)
+		log.Fatalf("Error creando canal RabbitMQ: %v", err)
 	}
-	defer ch.Close()
+	defer channel.Close()
 
-	// Declarar cola
-	q, err := ch.QueueDeclare(
-		queueName, // nombre de la cola
+	// Declarar cola durable
+	queue, err := channel.QueueDeclare(
+		queueName, // nombre
 		true,      // durable
 		false,     // autoDelete
 		false,     // exclusive
@@ -59,32 +91,54 @@ func main() {
 		nil,       // argumentos
 	)
 	if err != nil {
-		log.Fatalf("Error declarando cola %s: %v", queueName, err)
+		log.Fatalf("Error declarando cola: %v", err)
 	}
 
-	// Consumir mensajes
-	msgs, err := ch.Consume(
-		q.Name, // cola
-		"",     // consumidor
-		true,   // autoAck
-		false,  // exclusive
-		false,  // noLocal
-		false,  // noWait
-		nil,    // args
+	// Configurar consumidor
+	messages, err := channel.Consume(
+		queue.Name, // cola
+		"",         // consumer tag
+		false,     // auto-ack (manualmente para evitar pérdidas)
+		false,     // exclusive
+		false,     // no-local
+		false,     // no-wait
+		nil,       // args
 	)
 	if err != nil {
 		log.Fatalf("Error registrando consumidor: %v", err)
 	}
 
-	log.Printf("Consumidor RabbitMQ iniciado para cola %s", queueName)
-	for msg := range msgs {
-		var weatherData WeatherData
-		err := json.Unmarshal(msg.Body, &weatherData)
-		if err != nil {
-			log.Printf("Error deserializando mensaje: %v", err)
+	log.Printf("Consumidor iniciado para cola: %s", queueName)
+
+	// Procesar mensajes
+	for msg := range messages {
+		startTime := time.Now()
+		
+		var weather WeatherData
+		if err := json.Unmarshal(msg.Body, &weather); err != nil {
+			log.Printf("Error deserializando mensaje (ID: %s): %v", msg.MessageId, err)
+			msg.Nack(false, true) // Reintentar mensaje
 			continue
 		}
-		log.Printf("Mensaje recibido: Description=%s, Country=%s, Weather=%s",
-			weatherData.Description, weatherData.Country, weatherData.Weather)
+
+		// Almacenar en Valkey
+		valkeyKey := "weather:" + weather.Country + ":" + time.Now().Format("20060102_150405")
+		valkeyValue, _ := json.Marshal(weather)
+		
+		if err := valkeyClient.Set(ctx, valkeyKey, valkeyValue, 24*time.Hour).Err(); err != nil {
+			log.Printf("Error guardando en Valkey (ID: %s): %v", msg.MessageId, err)
+			msg.Nack(false, true) // Reintentar mensaje
+			continue
+		}
+		log.Printf("Mensaje guardado en Valkey (ID: %s, Key: %s)", msg.MessageId, valkeyKey)
+
+
+		// Registrar éxito
+		processingTime := time.Since(startTime).Milliseconds()
+
+		log.Printf("Mensaje recibido: Description=%s, Country=%s, Weather=%s, tiempo de procesamiento=%d ms",
+		weather.Description, weather.Country, weather.Weather, processingTime)
+
+		msg.Ack(false)
 	}
 }

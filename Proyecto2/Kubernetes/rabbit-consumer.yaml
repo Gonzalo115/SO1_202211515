@@ -21,3 +21,17 @@ spec:
               value: "amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/"
             - name: RABBITMQ_QUEUE
               value: "weather-queue"
+            - name: VALKEY_HOST
+              value: "valkey-service.proyecto2.svc.cluster.local:6379"
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: valkey-secret
+                  key: password
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
