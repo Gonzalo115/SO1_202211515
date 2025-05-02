@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: kafka-consumer
-          image: 18fernando/kafka-consumer:1
+          image: 18fernando/kafka-consumer:2
           env:
             - name: KAFKA_BROKER
               value: "my-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
@@ -23,3 +23,10 @@ spec:
               value: "my-topic"
             - name: KAFKA_GROUP_ID
               value: "go-consumer-group"
+            - name: REDIS_HOST
+              value: "redis-service:6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
