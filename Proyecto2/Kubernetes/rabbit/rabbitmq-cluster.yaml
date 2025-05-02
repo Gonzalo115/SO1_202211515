@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rabbitmq
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq
+  namespace: rabbitmq
+spec:
+  replicas: 1
+  service:
+    type: ClusterIP
+  rabbitmq:
+    additionalConfig: |
+      default_user = guest
+      default_pass = guest
+  resources:
+    requests:
+      cpu: "300m" # Reduce a 0.3 CPU (ajusta según lo disponible)
+      memory: "1Gi" # Mantén memoria suficiente
+    limits:
+      cpu: "500m" # Limita a 0.5 CPU
+      memory: "2Gi" # Limita a 2GB de memoria

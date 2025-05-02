@@ -18,6 +18,11 @@ spec:
           image: 18fernando/grpc-server-rabbit:1
           ports:
             - containerPort: 50052
+          env:
+            - name: RABBITMQ_URL
+              value: "amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/"
+            - name: RABBITMQ_QUEUE
+              value: "weather-queue"
 
 ---
 apiVersion: v1

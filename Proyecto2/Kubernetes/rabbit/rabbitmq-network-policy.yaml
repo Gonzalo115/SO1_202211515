@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-proyecto2-to-rabbitmq
+  namespace: rabbitmq
+spec:
+  podSelector:
+    matchLabels:
+      app: rabbitmq
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: proyecto2
+      ports:
+        - protocol: TCP
+          port: 5672
+  policyTypes:
+    - Ingress
