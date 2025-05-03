@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/kafka-go"
@@ -72,17 +70,17 @@ func main() {
 			continue
 		}
 
-        timestamp := time.Now().Format("20060102_150405")
-        key := fmt.Sprintf("registro:%s", timestamp)
+		// Contador total de mensajes
+		err = rdb.Incr(ctx, "total:messages").Err()
+		if err != nil {
+			log.Printf("Error incrementando contador total: %v", err)
+		}
 
-		// Grabar mensaje en redis
-
-        err = rdb.Set(ctx, key, m.Value, 0).Err()
-        if err != nil {
-            log.Printf("Error al guardar en Redis: %v\n", err)
-        } else {
-            log.Printf("Registro guardado [%s]: %s\n", key, m.Value)
-        }
+		// Contador por país (usando hash)
+		err = rdb.HIncrBy(ctx, "countries:count", data.Country, 1).Err()
+		if err != nil {
+			log.Printf("Error incrementando contador para país %s: %v", data.Country, err)
+		}
 
 
 

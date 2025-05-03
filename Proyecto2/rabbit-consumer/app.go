@@ -121,17 +121,17 @@ func main() {
 			continue
 		}
 
-		// Almacenar en Valkey
-		valkeyKey := "weather:" + weather.Country + ":" + time.Now().Format("20060102_150405")
-		valkeyValue, _ := json.Marshal(weather)
-		
-		if err := valkeyClient.Set(ctx, valkeyKey, valkeyValue, 24*time.Hour).Err(); err != nil {
-			log.Printf("Error guardando en Valkey (ID: %s): %v", msg.MessageId, err)
-			msg.Nack(false, true) // Reintentar mensaje
-			continue
+		// Contador total de mensajes
+		err = valkeyClient.Incr(ctx, "total:messages").Err()
+		if err != nil {
+			log.Printf("Error incrementando contador total: %v", err)
 		}
-		log.Printf("Mensaje guardado en Valkey (ID: %s, Key: %s)", msg.MessageId, valkeyKey)
 
+		// Contador por país (usando hash)
+		err = valkeyClient.HIncrBy(ctx, "countries:count", weather.Country, 1).Err()
+		if err != nil {
+			log.Printf("Error incrementando contador para país %s: %v", weather.Country, err)
+		}
 
 		// Registrar éxito
 		processingTime := time.Since(startTime).Milliseconds()
