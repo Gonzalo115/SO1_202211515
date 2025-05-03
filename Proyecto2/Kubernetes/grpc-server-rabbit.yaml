@@ -8,14 +8,18 @@ spec:
   selector:
     matchLabels:
       app: grpc-server-rabbit
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: grpc-server-rabbit
     spec:
       containers:
-        - name: grpc-server-kafka
-          image: 18fernando/grpc-server-rabbit:1
+        - name: grpc-server-rabbit
+          image: 18fernando/grpc-server-rabbit:2
           ports:
             - containerPort: 50052
           env:
@@ -23,6 +27,31 @@ spec:
               value: "amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/"
             - name: RABBITMQ_QUEUE
               value: "weather-queue"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:50052"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          livenessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:50052"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 10"] # Tiempo para drenar conexiones
 
 ---
 apiVersion: v1

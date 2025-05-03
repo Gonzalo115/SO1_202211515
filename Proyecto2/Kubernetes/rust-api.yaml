@@ -21,6 +21,13 @@ spec:
           env:
             - name: GO_SERVICE_URL
               value: "http://grpc-client:8081"
+          resources:
+            requests:
+              cpu: "100m" # 0.1 CPU cores
+              memory: "128Mi"
+            limits:
+              cpu: "500m" # 0.5 CPU cores
+              memory: "256Mi"
 ---
 apiVersion: v1
 kind: Service
